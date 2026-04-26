@@ -1,65 +1,151 @@
-import Image from "next/image";
+"use client";
+import React, { useState, useEffect } from "react";
 
-export default function Home() {
+// 🔥 PRO VERSION: Real data + indicators + smarter signals
+
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+
+export default function StockTrackerPro() {
+  const [stocks, setStocks] = useState([]);
+  const [symbol, setSymbol] = useState("");
+
+  const fetchStockData = async (sym) => {
+    try {
+      const res = await fetch(
+        `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${sym}.BSE&apikey=${API_KEY}`
+      );
+      const data = await res.json();
+
+      const series = data["Time Series (Daily)"];
+      if (!series) return;
+
+      const prices = Object.values(series)
+        .slice(0, 20)
+        .map((d) => parseFloat(d["4. close"]))
+        .reverse();
+
+      const latest = prices[prices.length - 1];
+
+      setStocks((prev) => [
+        ...prev,
+        { name: sym.toUpperCase(), price: latest, history: prices },
+      ]);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const addStock = () => {
+    if (!symbol) return;
+    fetchStockData(symbol);
+    setSymbol("");
+  };
+
+  // 📊 Moving Average
+  const movingAverage = (data) =>
+    data.reduce((a, b) => a + b, 0) / data.length;
+
+  // 📉 RSI Calculation (simplified)
+  const calculateRSI = (prices) => {
+    let gains = 0;
+    let losses = 0;
+
+    for (let i = 1; i < prices.length; i++) {
+      const diff = prices[i] - prices[i - 1];
+      if (diff > 0) gains += diff;
+      else losses -= diff;
+    }
+
+    const rs = gains / (losses || 1);
+    return 100 - 100 / (1 + rs);
+  };
+
+  // 🧠 Smart Signal Engine
+  const getSignal = (history) => {
+    const latest = history[history.length - 1];
+    const avg = movingAverage(history);
+    const rsi = calculateRSI(history);
+
+    if (rsi < 30 && latest < avg * 0.95)
+      return "🔥 STRONG BUY (Oversold + Undervalued)";
+
+    if (rsi > 70 && latest > avg * 1.1)
+      return "⚠️ SELL / AVOID (Overbought)";
+
+    if (latest < avg) return "📉 Watch for Dip Buying";
+
+    return "⚖️ Hold / Wait";
+  };
+
+  // 🔄 Reversal detection
+  const isReversal = (history) => {
+    const n = history.length;
+    if (n < 3) return false;
+    return history[n - 3] > history[n - 2] && history[n - 2] < history[n - 1];
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="p-6 grid gap-4">
+      <h1 className="text-3xl font-bold">🚀 PRO Stock Intelligence Dashboard</h1>
+
+<div style={{ display: "flex", gap: 10 }}>
+  <input
+    placeholder="Add stock (e.g. SBIN)"
+    value={symbol}
+    onChange={(e) => setSymbol(e.target.value)}
+    style={{ padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
+  />
+
+  <button
+    onClick={addStock}
+    style={{
+      padding: "8px 12px",
+      backgroundColor: "#007bff",
+      color: "white",
+      border: "none",
+      borderRadius: 6,
+      cursor: "pointer",
+    }}
+  >
+    Track
+  </button>
+</div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        {stocks.map((stock, index) => (
+          <div key={index}>
+            <div style={{ 
+  border: "1px solid #ccc", 
+  padding: 16, 
+  borderRadius: 12, 
+  marginTop: 10,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+}}>
+  <h2 style={{ fontSize: 18, fontWeight: "bold" }}>{stock.name}</h2>
+
+  <p style={{ fontSize: 16 }}>₹{stock.price.toFixed(2)}</p>
+
+  <p style={{ marginTop: 8 }}>
+    Signal: {getSignal(stock.history)}
+  </p>
+
+  {isReversal(stock.history) && (
+    <p style={{ color: "green", fontWeight: "bold" }}>
+      🔄 Reversal Detected (Early Entry Signal)
+    </p>
+  )}
+
+  <p style={{ fontSize: 12, marginTop: 8 }}>
+    RSI: {calculateRSI(stock.history).toFixed(2)}
+  </p>
+
+  <p style={{ fontSize: 12, color: "gray" }}>
+    History: {stock.history.join(" → ")}
+  </p>
+</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
