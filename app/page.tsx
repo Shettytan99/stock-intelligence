@@ -18,7 +18,7 @@ export default function StockTrackerPro() {
     try {
       const res = await fetch(
       //`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${sym}.NS&apikey=${API_KEY}`
-		`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${sym}.NSE&apikey=${API_KEY}`
+		`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${sym}.BSE&apikey=${API_KEY}`
       );
       const data = await res.json();
 
